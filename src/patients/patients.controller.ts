@@ -17,7 +17,7 @@ export class PatientsController {
     return this.patientsService.createPatient(createPatientDto);
   }
 
-  @Get()
+  @Get('')
   getPatients() {
     return this.patientsService.getPatients();
   }

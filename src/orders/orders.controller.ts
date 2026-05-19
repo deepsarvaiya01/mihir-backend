@@ -27,6 +27,7 @@ export class OrdersController {
   }
 
   @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.LAB_USER)
   getOrders() {
     return this.ordersService.getOrders();
   }
@@ -45,7 +46,20 @@ export class OrdersController {
   }
 
   @Get(':id/results')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.LAB_USER)
   getOrderResults(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.getOrderResults(id);
+  }
+
+  @Post(':id/approve')
+  @Roles(UserRole.SUPER_ADMIN)
+  approveOrder(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.approveOrder(id);
+  }
+
+  @Post(':id/reject')
+  @Roles(UserRole.SUPER_ADMIN)
+  rejectOrder(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.rejectOrder(id);
   }
 }

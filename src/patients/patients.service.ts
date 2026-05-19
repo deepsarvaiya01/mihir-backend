@@ -43,6 +43,10 @@ export class PatientsService {
     return this.patientsRepository.find({ order: { id: 'DESC' } });
   }
 
+  async getPatientById(id: number) {
+    return this.patientsRepository.findOne({ where: { id } });
+  }
+
   async getPatientResultHistory(patientId: number) {
     const patient = await this.patientsRepository.findOne({ where: { id: patientId } });
     if (!patient) {

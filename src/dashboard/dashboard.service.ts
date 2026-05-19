@@ -20,7 +20,7 @@ export class DashboardService {
   ) {}
 
   async getSummary() {
-    const [superAdmins, labUsers, templates, activeTemplates, patients, orders, completedOrders] =
+    const [superAdmins, labUsers, templates, activeTemplates, patients, orders, approvedOrders] =
       await Promise.all([
         this.usersRepository.count({ where: { role: UserRole.SUPER_ADMIN } }),
         this.usersRepository.count({ where: { role: UserRole.LAB_USER } }),
@@ -28,7 +28,7 @@ export class DashboardService {
         this.templatesRepository.count({ where: { active: true } }),
         this.patientsRepository.count(),
         this.ordersRepository.count(),
-        this.ordersRepository.count({ where: { status: OrderStatus.COMPLETED } }),
+        this.ordersRepository.count({ where: { status: OrderStatus.APPROVED } }),
       ]);
 
     return {
@@ -38,8 +38,8 @@ export class DashboardService {
       activeTemplates,
       patients,
       orders,
-      completedOrders,
-      pendingOrders: Math.max(orders - completedOrders, 0),
+      completedOrders: approvedOrders,
+      pendingOrders: Math.max(orders - approvedOrders, 0),
     };
   }
 }

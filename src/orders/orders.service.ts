@@ -49,16 +49,35 @@ export class OrdersService {
   }
 
   async getOrders() {
-    return this.ordersRepository.find({
-      relations: ['patient', 'template'],
-      order: { createdAt: 'DESC' },
-    });
+  const orders = await this.ordersRepository.find({
+      relations: ['template', 'patient'],
+  });
+
+  if (!orders) {
+    throw new NotFoundException('Order not found');
   }
+
+  const ordersWithFields = await Promise.all(
+    orders.map(async (order) => {
+      const fields = await this.fieldsRepository.find({
+        where: { templateId: order.templateId },
+        order: { displayOrder: 'ASC', id: 'ASC' },
+      });
+
+      return {
+        ...order,
+        fields,
+      };
+    }),
+  );
+
+  return { orders: ordersWithFields };
+}
 
   async getOrderForm(orderId: number) {
     const order = await this.ordersRepository.findOne({
       where: { id: orderId },
-      relations: ['patient', 'template'],
+      relations: ['template'],
     });
     if (!order) {
       throw new NotFoundException('Order not found');
@@ -122,10 +141,30 @@ export class OrdersService {
     });
 
     await this.resultsRepository.save(entities);
-    order.status = OrderStatus.COMPLETED;
+    order.status = OrderStatus.AWAITING_APPROVAL;
     await this.ordersRepository.save(order);
 
     return this.getOrderResults(orderId);
+  }
+
+  async approveOrder(orderId: number) {
+    const order = await this.ordersRepository.findOne({ where: { id: orderId } });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+    order.status = OrderStatus.APPROVED;
+    await this.ordersRepository.save(order);
+    return this.getOrderResults(orderId);
+  }
+
+  async rejectOrder(orderId: number) {
+    const order = await this.ordersRepository.findOne({ where: { id: orderId } });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+    order.status = OrderStatus.REJECTED;
+    await this.ordersRepository.save(order);
+    return { order };
   }
 
   async getOrderResults(orderId: number) {

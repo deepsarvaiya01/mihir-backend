@@ -15,7 +15,9 @@ import { PatientTestResult } from './patient-test-result.entity';
 export enum OrderStatus {
   PENDING = 'PENDING',
   IN_PROGRESS = 'IN_PROGRESS',
-  COMPLETED = 'COMPLETED',
+  AWAITING_APPROVAL = 'AWAITING_APPROVAL',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
 }
 
 @Entity({ name: 'patient_test_orders' })

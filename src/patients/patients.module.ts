@@ -15,4 +15,6 @@ import { PatientsService } from './patients.service';
   providers: [PatientsService],
   exports: [TypeOrmModule],
 })
+
+
 export class PatientsModule {}
