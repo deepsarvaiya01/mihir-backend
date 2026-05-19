@@ -3,7 +3,8 @@ services:
     name: mihir-laboratory-api
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build
+    # NODE_ENV=production skips devDependencies; @nestjs/cli is required to build
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run start:prod
     healthCheckPath: /
     envVars:
