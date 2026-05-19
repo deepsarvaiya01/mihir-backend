@@ -29,22 +29,22 @@ export class TestsService {
   }
 
   async updateTemplate(templateId: number, updateTemplateDto: UpdateTemplateDto) {
-    const template = await this.templatesRepository.findOne({
-      where: { id: templateId },
-    });
-    if (!template) {
-      throw new NotFoundException('Template not found');
-    }
-
+    const template = await this.templatesRepository.findOne({ where: { id: templateId } });
+    if (!template) throw new NotFoundException('Template not found');
     Object.assign(template, updateTemplateDto);
     return this.templatesRepository.save(template);
   }
 
+  async deleteTemplate(templateId: number) {
+    const template = await this.templatesRepository.findOne({ where: { id: templateId } });
+    if (!template) throw new NotFoundException('Template not found');
+    await this.templatesRepository.remove(template);
+    return { message: 'Template deleted successfully' };
+  }
+
   async createTemplateField(templateId: number, dto: UpsertTemplateFieldDto) {
     const template = await this.templatesRepository.findOne({ where: { id: templateId } });
-    if (!template) {
-      throw new NotFoundException('Template not found');
-    }
+    if (!template) throw new NotFoundException('Template not found');
     this.validateField(dto);
 
     const field = this.fieldsRepository.create({
@@ -52,7 +52,7 @@ export class TestsService {
       fieldName: dto.fieldName,
       fieldType: dto.fieldType,
       required: dto.required ?? false,
-      optionsJson: dto.options ? JSON.stringify(dto.options) : null,
+      optionsJson: dto.formulaJson ?? (dto.options ? JSON.stringify(dto.options) : null),
       unit: dto.unit ?? null,
       displayOrder: dto.displayOrder ?? 1,
     });
@@ -60,29 +60,35 @@ export class TestsService {
   }
 
   async updateTemplateField(templateId: number, fieldId: number, dto: UpsertTemplateFieldDto) {
-    const field = await this.fieldsRepository.findOne({
-      where: { id: fieldId, templateId },
-    });
-    if (!field) {
-      throw new NotFoundException('Template field not found');
-    }
+    const field = await this.fieldsRepository.findOne({ where: { id: fieldId, templateId } });
+    if (!field) throw new NotFoundException('Template field not found');
     this.validateField(dto);
 
     field.fieldName = dto.fieldName;
     field.fieldType = dto.fieldType;
     field.required = dto.required ?? false;
-    field.optionsJson = dto.options ? JSON.stringify(dto.options) : null;
+    field.optionsJson = dto.formulaJson ?? (dto.options ? JSON.stringify(dto.options) : null);
     field.unit = dto.unit ?? null;
     field.displayOrder = dto.displayOrder ?? 1;
     return this.fieldsRepository.save(field);
+  }
+
+  async deleteTemplateField(templateId: number, fieldId: number) {
+    const field = await this.fieldsRepository.findOne({ where: { id: fieldId, templateId } });
+    if (!field) throw new NotFoundException('Template field not found');
+    await this.fieldsRepository.remove(field);
+    return { message: 'Field deleted successfully' };
   }
 
   private validateField(dto: UpsertTemplateFieldDto) {
     if (dto.fieldType === FieldType.SELECT && (!dto.options || dto.options.length === 0)) {
       throw new BadRequestException('Select field requires options');
     }
-    if (dto.fieldType !== FieldType.SELECT && dto.options && dto.options.length > 0) {
+    if (dto.fieldType !== FieldType.SELECT && dto.fieldType !== FieldType.CALCULATED && dto.options?.length) {
       throw new BadRequestException('Options are only allowed for select fields');
+    }
+    if (dto.fieldType === FieldType.CALCULATED && !dto.formulaJson) {
+      throw new BadRequestException('Calculated field requires a formula');
     }
   }
 }

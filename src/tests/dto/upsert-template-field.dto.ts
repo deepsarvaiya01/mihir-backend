@@ -31,6 +31,10 @@ export class UpsertTemplateFieldDto {
 
   @IsString()
   @IsOptional()
+  formulaJson?: string;
+
+  @IsString()
+  @IsOptional()
   @MaxLength(40)
   unit?: string;
 

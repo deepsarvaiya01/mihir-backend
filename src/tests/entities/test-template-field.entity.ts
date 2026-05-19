@@ -13,6 +13,7 @@ export enum FieldType {
   CHECKBOX = 'checkbox',
   DATE = 'date',
   SELECT = 'select',
+  CALCULATED = 'calculated',
 }
 
 @Entity({ name: 'test_template_fields' })

@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { UsersModule } from './users/users.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -11,6 +13,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
@@ -33,6 +36,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
       }),
     }),
     AuthModule,
+    UsersModule,
     DashboardModule,
     TestsModule,
     PatientsModule,
