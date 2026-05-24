@@ -47,6 +47,21 @@ export class Patient {
   @Column({ name: 'emergency_contact_phone', type: 'varchar', length: 20, nullable: true })
   emergencyContactPhone: string | null;
 
+  @Column({ name: 'is_b2b', default: false })
+  isB2b: boolean;
+
+  @Column({ name: 'b2b_lab_id', type: 'int', nullable: true })
+  b2bLabId: number | null;
+
+  @Column({ name: 'lab_branch_id', type: 'int', nullable: true })
+  labBranchId: number | null;
+
+  @Column({ name: 'doctor_name', type: 'varchar', length: 120, nullable: true })
+  doctorName: string | null;
+
+  @Column({ name: 'report_date', type: 'date', nullable: true })
+  reportDate: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

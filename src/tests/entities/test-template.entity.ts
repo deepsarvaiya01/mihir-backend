@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { TestTemplateField } from './test-template-field.entity';
+import { TestTemplateB2bPrice } from './test-template-b2b-price.entity';
 
 @Entity({ name: 'test_templates' })
 export class TestTemplate {
@@ -22,10 +23,16 @@ export class TestTemplate {
   @Column({ default: true })
   active: boolean;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  amount: number;
+
   @OneToMany(() => TestTemplateField, (field) => field.template, {
     cascade: true,
   })
   fields: TestTemplateField[];
+
+  @OneToMany(() => TestTemplateB2bPrice, (p) => p.template)
+  b2bPrices: TestTemplateB2bPrice[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

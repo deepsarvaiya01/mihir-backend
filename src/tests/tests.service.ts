@@ -6,6 +6,7 @@ import { UpdateTemplateDto } from './dto/update-template.dto';
 import { UpsertTemplateFieldDto } from './dto/upsert-template-field.dto';
 import { FieldType, TestTemplateField } from './entities/test-template-field.entity';
 import { TestTemplate } from './entities/test-template.entity';
+import { TestTemplateB2bPrice } from './entities/test-template-b2b-price.entity';
 
 @Injectable()
 export class TestsService {
@@ -14,25 +15,66 @@ export class TestsService {
     private readonly templatesRepository: Repository<TestTemplate>,
     @InjectRepository(TestTemplateField)
     private readonly fieldsRepository: Repository<TestTemplateField>,
+    @InjectRepository(TestTemplateB2bPrice)
+    private readonly b2bPricesRepository: Repository<TestTemplateB2bPrice>,
   ) {}
 
-  async createTemplate(createTemplateDto: CreateTemplateDto) {
-    const template = this.templatesRepository.create(createTemplateDto);
-    return this.templatesRepository.save(template);
+  async createTemplate(dto: CreateTemplateDto) {
+    const template = this.templatesRepository.create({
+      name: dto.name,
+      code: dto.code,
+      active: dto.active ?? true,
+      amount: dto.amount ?? 0,
+    });
+    const saved = await this.templatesRepository.save(template);
+
+    if (dto.b2bPrices && dto.b2bPrices.length > 0) {
+      const prices = dto.b2bPrices.map(p =>
+        this.b2bPricesRepository.create({ templateId: saved.id, b2bLabId: p.b2bLabId, amount: p.amount }),
+      );
+      await this.b2bPricesRepository.save(prices);
+    }
+
+    return this.getTemplateById(saved.id);
   }
 
   async getTemplates() {
     return this.templatesRepository.find({
-      relations: ['fields'],
+      relations: ['fields', 'b2bPrices'],
       order: { id: 'DESC', fields: { displayOrder: 'ASC', id: 'ASC' } },
     });
   }
 
-  async updateTemplate(templateId: number, updateTemplateDto: UpdateTemplateDto) {
+  async getTemplateById(id: number) {
+    const template = await this.templatesRepository.findOne({
+      where: { id },
+      relations: ['fields', 'b2bPrices'],
+    });
+    if (!template) throw new NotFoundException('Template not found');
+    return template;
+  }
+
+  async updateTemplate(templateId: number, dto: UpdateTemplateDto) {
     const template = await this.templatesRepository.findOne({ where: { id: templateId } });
     if (!template) throw new NotFoundException('Template not found');
-    Object.assign(template, updateTemplateDto);
-    return this.templatesRepository.save(template);
+
+    if (dto.name !== undefined) template.name = dto.name;
+    if (dto.code !== undefined) template.code = dto.code;
+    if (dto.active !== undefined) template.active = dto.active;
+    if (dto.amount !== undefined) template.amount = dto.amount;
+    await this.templatesRepository.save(template);
+
+    if (dto.b2bPrices !== undefined) {
+      await this.b2bPricesRepository.delete({ templateId });
+      if (dto.b2bPrices.length > 0) {
+        const prices = dto.b2bPrices.map(p =>
+          this.b2bPricesRepository.create({ templateId, b2bLabId: p.b2bLabId, amount: p.amount }),
+        );
+        await this.b2bPricesRepository.save(prices);
+      }
+    }
+
+    return this.getTemplateById(templateId);
   }
 
   async deleteTemplate(templateId: number) {

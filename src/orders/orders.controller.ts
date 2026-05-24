@@ -14,6 +14,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/user.entity';
+import { CreateBatchOrdersDto } from './dto/create-batch-orders.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { SubmitOrderResultsDto } from './dto/submit-order-results.dto';
 import { OrdersService } from './orders.service';
@@ -80,6 +81,13 @@ export class OrdersController {
   @ApiOperation({ summary: 'Reopen a rejected order (clears previous results)' })
   reopenOrder(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.reopenOrder(id);
+  }
+
+  @Post('batch')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.LAB_USER)
+  @ApiOperation({ summary: 'Create multiple orders with payment info' })
+  createBatchOrders(@Body() dto: CreateBatchOrdersDto) {
+    return this.ordersService.createBatchOrders(dto);
   }
 
   @Delete(':id')

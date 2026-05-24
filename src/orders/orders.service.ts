@@ -4,12 +4,14 @@ import { In, Repository } from 'typeorm';
 import { Patient } from '../patients/entities/patient.entity';
 import { FieldType, TestTemplateField } from '../tests/entities/test-template-field.entity';
 import { TestTemplate } from '../tests/entities/test-template.entity';
+import { TestTemplateB2bPrice } from '../tests/entities/test-template-b2b-price.entity';
+import { CreateBatchOrdersDto } from './dto/create-batch-orders.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import {
   SubmitOrderResultValueDto,
   SubmitOrderResultsDto,
 } from './dto/submit-order-results.dto';
-import { OrderStatus, PatientTestOrder } from './entities/patient-test-order.entity';
+import { OrderStatus, PatientTestOrder, PaymentStatus, PaymentType } from './entities/patient-test-order.entity';
 import { PatientTestResult } from './entities/patient-test-result.entity';
 
 @Injectable()
@@ -25,6 +27,8 @@ export class OrdersService {
     private readonly templatesRepository: Repository<TestTemplate>,
     @InjectRepository(TestTemplateField)
     private readonly fieldsRepository: Repository<TestTemplateField>,
+    @InjectRepository(TestTemplateB2bPrice)
+    private readonly b2bPricesRepository: Repository<TestTemplateB2bPrice>,
   ) {}
 
   async createOrder(createOrderDto: CreateOrderDto) {
@@ -173,6 +177,46 @@ export class OrdersService {
     await this.resultsRepository.delete({ orderId });
     order.status = OrderStatus.PENDING;
     return this.ordersRepository.save(order);
+  }
+
+  async createBatchOrders(dto: CreateBatchOrdersDto) {
+    const patient = await this.patientsRepository.findOne({ where: { id: dto.patientId } });
+    if (!patient) throw new NotFoundException('Patient not found');
+
+    const receiptNumber = `RCP${Date.now()}`;
+    const discount = dto.discount ?? 0;
+    const results: PatientTestOrder[] = [];
+
+    for (const item of dto.orders) {
+      const template = await this.templatesRepository.findOne({ where: { id: item.templateId } });
+      if (!template) throw new NotFoundException(`Template ${item.templateId} not found`);
+
+      // Use B2B price if patient is B2B and a price exists for their lab
+      const b2bPrice = patient.b2bLabId
+        ? await this.b2bPricesRepository.findOne({ where: { templateId: item.templateId, b2bLabId: patient.b2bLabId } })
+        : null;
+
+      const baseAmount = Number(b2bPrice?.amount ?? template.amount);
+      const netAmount = Math.round(baseAmount * (1 - discount / 100) * 100) / 100;
+
+      const order = this.ordersRepository.create({
+        patientId: dto.patientId,
+        templateId: item.templateId,
+        status: OrderStatus.PENDING,
+        amount: baseAmount,
+        discount,
+        netAmount,
+        paymentStatus: (dto.paymentStatus ?? 'PENDING') as any,
+        paymentType: (dto.paymentType ?? null) as any,
+        receiptNumber,
+      });
+
+      const saved = await this.ordersRepository.save(order);
+      const found = await this.ordersRepository.findOne({ where: { id: saved.id }, relations: ['patient', 'template'] });
+      if (found) results.push(found);
+    }
+
+    return { receiptNumber, orders: results };
   }
 
   async deleteOrder(orderId: number) {

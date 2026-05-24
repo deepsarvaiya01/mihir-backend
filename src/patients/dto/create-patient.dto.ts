@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class CreatePatientDto {
   @IsString()
@@ -68,4 +68,10 @@ export class CreatePatientDto {
   @MaxLength(20)
   @IsOptional()
   emergencyContactPhone?: string;
+
+  @IsBoolean() @IsOptional() isB2b?: boolean;
+  @IsInt() @Min(1) @IsOptional() b2bLabId?: number;
+  @IsInt() @Min(1) @IsOptional() labBranchId?: number;
+  @IsString() @MaxLength(120) @IsOptional() doctorName?: string;
+  @IsString() @IsOptional() reportDate?: string;
 }

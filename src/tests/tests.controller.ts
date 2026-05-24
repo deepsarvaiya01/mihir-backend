@@ -33,6 +33,13 @@ export class TestsController {
     return this.testsService.getTemplates();
   }
 
+  @Get(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.LAB_USER)
+  @ApiOperation({ summary: 'Get a single test template by ID' })
+  getTemplate(@Param('id', ParseIntPipe) id: number) {
+    return this.testsService.getTemplateById(id);
+  }
+
   @Patch(':id')
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update a test template' })

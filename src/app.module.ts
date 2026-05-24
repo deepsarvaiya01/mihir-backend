@@ -10,6 +10,8 @@ import { TestsModule } from './tests/tests.module';
 import { PatientsModule } from './patients/patients.module';
 import { OrdersModule } from './orders/orders.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { B2bLabsModule } from './b2b-labs/b2b-labs.module';
+import { LabBranchesModule } from './lab-branches/lab-branches.module';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
     TestsModule,
     PatientsModule,
     OrdersModule,
+    B2bLabsModule,
+    LabBranchesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

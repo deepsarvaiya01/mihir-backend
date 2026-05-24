@@ -35,6 +35,11 @@ export class PatientsService {
       postalCode: createPatientDto.postalCode ?? null,
       emergencyContactName: createPatientDto.emergencyContactName ?? null,
       emergencyContactPhone: createPatientDto.emergencyContactPhone ?? null,
+      isB2b: createPatientDto.isB2b ?? false,
+      b2bLabId: createPatientDto.b2bLabId ?? null,
+      labBranchId: createPatientDto.labBranchId ?? null,
+      doctorName: createPatientDto.doctorName ?? null,
+      reportDate: createPatientDto.reportDate ?? null,
     });
     return this.patientsRepository.save(patient);
   }
