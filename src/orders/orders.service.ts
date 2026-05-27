@@ -119,6 +119,10 @@ export class OrdersService {
 
     await this.resultsRepository.save(entities);
     order.status = OrderStatus.AWAITING_APPROVAL;
+    if (submitOrderResultsDto.attachmentBase64) {
+      order.attachmentBase64 = submitOrderResultsDto.attachmentBase64;
+      order.attachmentName = submitOrderResultsDto.attachmentName ?? null;
+    }
     await this.ordersRepository.save(order);
     return this.getOrderResults(orderId);
   }

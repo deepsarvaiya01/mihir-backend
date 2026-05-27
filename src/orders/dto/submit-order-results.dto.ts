@@ -37,6 +37,15 @@ export class SubmitOrderResultsDto {
   @ValidateNested({ each: true })
   @Type(() => SubmitOrderResultValueDto)
   values: SubmitOrderResultValueDto[];
+
+  /** Optional base64 data URI of a PDF to attach to this order for later report merging */
+  @IsString()
+  @IsOptional()
+  attachmentBase64?: string;
+
+  @IsString()
+  @IsOptional()
+  attachmentName?: string;
 }
 
 export { SubmitOrderResultValueDto };

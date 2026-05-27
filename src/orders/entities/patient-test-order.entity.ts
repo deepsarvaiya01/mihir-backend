@@ -76,6 +76,13 @@ export class PatientTestOrder {
   @Column({ name: 'receipt_number', type: 'varchar', length: 30, nullable: true })
   receiptNumber: string | null;
 
+  /** Base64 data URI of an attached PDF to be merged with the final report */
+  @Column({ name: 'attachment_base64', type: 'longtext', nullable: true })
+  attachmentBase64: string | null;
+
+  @Column({ name: 'attachment_name', type: 'varchar', length: 255, nullable: true })
+  attachmentName: string | null;
+
   @OneToMany(() => PatientTestResult, (result) => result.order, { cascade: true })
   results: PatientTestResult[];
 
