@@ -16,6 +16,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { CreateBatchOrdersDto } from './dto/create-batch-orders.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { SubmitOrderResultsDto } from './dto/submit-order-results.dto';
 import { OrdersService } from './orders.service';
 
@@ -88,6 +89,16 @@ export class OrdersController {
   @ApiOperation({ summary: 'Create multiple orders with payment info' })
   createBatchOrders(@Body() dto: CreateBatchOrdersDto) {
     return this.ordersService.createBatchOrders(dto);
+  }
+
+  @Patch(':id/payment')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.LAB_USER)
+  @ApiOperation({ summary: 'Update payment details for an order' })
+  updatePayment(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePaymentDto,
+  ) {
+    return this.ordersService.updatePayment(id, dto);
   }
 
   @Delete(':id')

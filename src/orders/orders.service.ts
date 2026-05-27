@@ -7,6 +7,7 @@ import { TestTemplate } from '../tests/entities/test-template.entity';
 import { TestTemplateB2bPrice } from '../tests/entities/test-template-b2b-price.entity';
 import { CreateBatchOrdersDto } from './dto/create-batch-orders.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdatePaymentDto } from './dto/update-payment.dto';
 import {
   SubmitOrderResultValueDto,
   SubmitOrderResultsDto,
@@ -221,6 +222,30 @@ export class OrdersService {
     }
 
     return { receiptNumber, orders: results };
+  }
+
+  async updatePayment(orderId: number, dto: UpdatePaymentDto) {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: ['patient', 'template'],
+    });
+    if (!order) throw new NotFoundException('Order not found');
+
+    if (dto.paymentStatus !== undefined) order.paymentStatus = dto.paymentStatus;
+    if (dto.paymentType !== undefined) order.paymentType = dto.paymentType ?? null;
+    if (dto.amount !== undefined) order.amount = dto.amount;
+    if (dto.discount !== undefined) order.discount = dto.discount;
+    if (dto.netAmount !== undefined) {
+      order.netAmount = dto.netAmount;
+    } else if (dto.amount !== undefined || dto.discount !== undefined) {
+      // Auto-recalculate if amount or discount changed but netAmount not explicitly set
+      const base = Number(dto.amount ?? order.amount);
+      const disc = Number(dto.discount ?? order.discount);
+      order.netAmount = Math.round(base * (1 - disc / 100) * 100) / 100;
+    }
+    if (dto.receiptNumber !== undefined) order.receiptNumber = dto.receiptNumber ?? null;
+
+    return this.ordersRepository.save(order);
   }
 
   async deleteOrder(orderId: number) {
