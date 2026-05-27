@@ -14,7 +14,7 @@ import { PatientsService } from './patients.service';
 @ApiBearerAuth()
 @Controller('patients')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.LAB_USER)
+@Roles(UserRole.SUPER_ADMIN, UserRole.LAB_USER)
 export class PatientsController {
   constructor(private readonly patientsService: PatientsService) {}
 
