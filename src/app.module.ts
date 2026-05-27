@@ -18,24 +18,30 @@ import { LabBranchesModule } from './lab-branches/lab-branches.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     ConfigModule.forRoot({
       isGlobal: true,
+      // Render injects env vars; .env is for local dev only
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
       envFilePath: '.env',
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'mysql',
-        host: configService.get<string>('DB_HOST', 'localhost'),
-        port: configService.get<number>('DB_PORT', 3306),
-        username: configService.get<string>('DB_USER', 'root'),
-        password: configService.get<string>('DB_PASSWORD', ''),
-        database: configService.get<string>('DB_NAME', 'laboratory_db'),
-        autoLoadEntities: true,
-        synchronize: true,
-        ssl:
-          configService.get<string>('DB_SSL', 'false') === 'true'
-            ? { rejectUnauthorized: false }
-            : undefined,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const useSsl =
+          configService.get<string>('DB_SSL', 'false') === 'true';
+
+        return {
+          type: 'mysql' as const,
+          host: configService.get<string>('DB_HOST', 'localhost'),
+          port: configService.get<number>('DB_PORT', 3306),
+          username: configService.get<string>('DB_USER', 'root'),
+          password: configService.get<string>('DB_PASSWORD', ''),
+          database: configService.get<string>('DB_NAME', 'laboratory_db'),
+          autoLoadEntities: true,
+          synchronize:
+            configService.get<string>('DB_SYNCHRONIZE', 'true') === 'true',
+          ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+          connectTimeout: 60000,
+        };
+      },
     }),
     AuthModule,
     UsersModule,

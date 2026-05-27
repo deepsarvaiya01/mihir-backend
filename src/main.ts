@@ -5,13 +5,25 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
+function getCorsOrigins(): string[] {
+  const raw =
+    process.env.FRONTEND_URL ??
+    process.env.FRONTEND_URLS ??
+    'http://localhost:5173';
+
+  return raw
+    .split(',')
+    .map((url) => url.trim())
+    .filter(Boolean);
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.use(helmet());
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+    origin: getCorsOrigins(),
     credentials: true,
   });
 
@@ -37,9 +49,11 @@ async function bootstrap() {
     swaggerOptions: { persistAuthorization: true },
   });
 
-  const port = process.env.PORT ?? 3000;
-  await app.listen(port);
-  console.log(`Application running on http://localhost:${port}`);
-  console.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+  const port = Number(process.env.PORT ?? 3000);
+  const host = process.env.HOST ?? '0.0.0.0';
+
+  await app.listen(port, host);
+  console.log(`Application running on port ${port}`);
+  console.log(`Swagger docs available at /api/docs`);
 }
 bootstrap();
