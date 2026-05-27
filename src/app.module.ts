@@ -12,6 +12,7 @@ import { OrdersModule } from './orders/orders.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { B2bLabsModule } from './b2b-labs/b2b-labs.module';
 import { LabBranchesModule } from './lab-branches/lab-branches.module';
+import { SignaturesModule } from './signatures/signatures.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { LabBranchesModule } from './lab-branches/lab-branches.module';
     OrdersModule,
     B2bLabsModule,
     LabBranchesModule,
+    SignaturesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
