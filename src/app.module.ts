@@ -13,6 +13,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { B2bLabsModule } from './b2b-labs/b2b-labs.module';
 import { LabBranchesModule } from './lab-branches/lab-branches.module';
 import { SignaturesModule } from './signatures/signatures.module';
+import { LabSettingsModule } from './lab-settings/lab-settings.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { SignaturesModule } from './signatures/signatures.module';
     B2bLabsModule,
     LabBranchesModule,
     SignaturesModule,
+    LabSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

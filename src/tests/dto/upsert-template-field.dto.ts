@@ -42,4 +42,13 @@ export class UpsertTemplateFieldDto {
   @Min(1)
   @IsOptional()
   displayOrder?: number;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  referenceRange?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isSectionHeader?: boolean;
 }

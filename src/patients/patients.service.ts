@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
+import { MailService } from '../mail/mail.service';
 import { PatientTestOrder } from '../orders/entities/patient-test-order.entity';
 import { PatientTestResult } from '../orders/entities/patient-test-result.entity';
 import { TestTemplateField } from '../tests/entities/test-template-field.entity';
@@ -18,11 +19,20 @@ export class PatientsService {
     private readonly resultsRepository: Repository<PatientTestResult>,
     @InjectRepository(TestTemplateField)
     private readonly fieldsRepository: Repository<TestTemplateField>,
+    private readonly mailService: MailService,
   ) {}
 
+  /** Generates PAT-YYYY-NNNNN format, e.g. PAT-2025-00042 */
+  private generatePatientCode(id: number): string {
+    const year = new Date().getFullYear();
+    return `PAT-${year}-${String(id).padStart(5, '0')}`;
+  }
+
   async createPatient(createPatientDto: CreatePatientDto) {
-    const patient = this.patientsRepository.create({
+    // Step 1: save with a unique temporary code to obtain the auto-increment ID
+    const temp = this.patientsRepository.create({
       ...createPatientDto,
+      patientCode: `TMP-${Date.now()}`,
       age: createPatientDto.age ?? null,
       dateOfBirth: createPatientDto.dateOfBirth ?? null,
       gender: createPatientDto.gender ?? null,
@@ -41,7 +51,26 @@ export class PatientsService {
       doctorName: createPatientDto.doctorName ?? null,
       reportDate: createPatientDto.reportDate ?? null,
     });
-    return this.patientsRepository.save(patient);
+    const saved = await this.patientsRepository.save(temp);
+
+    // Step 2: update with the properly formatted code
+    saved.patientCode = this.generatePatientCode(saved.id);
+    const patient = await this.patientsRepository.save(saved);
+
+    // Step 3: send registration email (fire-and-forget)
+    if (patient.email) {
+      const dateStr = new Date().toLocaleDateString('en-IN', {
+        day: '2-digit', month: 'long', year: 'numeric',
+      });
+      void this.mailService.sendPatientRegistration({
+        to: patient.email,
+        patientName: patient.fullName,
+        patientCode: patient.patientCode,
+        registrationDate: dateStr,
+      });
+    }
+
+    return patient;
   }
 
   async getPatients(search?: string) {
@@ -67,7 +96,9 @@ export class PatientsService {
   async updatePatient(id: number, dto: Partial<CreatePatientDto>) {
     const patient = await this.patientsRepository.findOne({ where: { id } });
     if (!patient) throw new NotFoundException('Patient not found');
-    Object.assign(patient, dto);
+    // Never overwrite the auto-generated code
+    const { patientCode: _ignored, ...safeDto } = dto;
+    Object.assign(patient, safeDto);
     return this.patientsRepository.save(patient);
   }
 

@@ -154,18 +154,44 @@ export class OrdersService {
     });
     if (!order) throw new NotFoundException('Order not found');
 
-    const rawResults = await this.resultsRepository.find({
-      where: { orderId },
-      relations: ['field'],
-      order: { fieldId: 'ASC' },
+    // Fetch all fields for this template (preserves display order)
+    const allFields = await this.fieldsRepository.find({
+      where: { templateId: order.templateId },
+      order: { displayOrder: 'ASC', id: 'ASC' },
     });
 
-    const results = rawResults.map((item) => ({
-      fieldName: item.field?.fieldName ?? '',
-      fieldType: item.field?.fieldType ?? 'text',
-      value: item.valueText ?? item.valueNumber ?? item.valueBoolean ?? item.valueDate ?? '',
-      unit: item.field?.unit ?? null,
-    }));
+    // Fetch submitted result values
+    const rawResults = await this.resultsRepository.find({
+      where: { orderId },
+      order: { fieldId: 'ASC' },
+    });
+    const resultsByFieldId = new Map(rawResults.map((r) => [r.fieldId, r]));
+
+    // Build ordered results: section-header fields are always included,
+    // regular fields only if a result row exists
+    const results = allFields
+      .filter((f) => f.isSectionHeader || resultsByFieldId.has(f.id))
+      .map((f) => {
+        if (f.isSectionHeader) {
+          return {
+            fieldName: f.fieldName,
+            fieldType: f.fieldType as string,
+            value: null as string | number | boolean | null,
+            unit: null as string | null,
+            referenceRange: null as string | null,
+            isSectionHeader: true,
+          };
+        }
+        const r = resultsByFieldId.get(f.id)!;
+        return {
+          fieldName: f.fieldName,
+          fieldType: f.fieldType as string,
+          value: (r.valueText ?? r.valueNumber ?? r.valueBoolean ?? r.valueDate ?? null) as string | number | boolean | null,
+          unit: f.unit ?? null,
+          referenceRange: f.referenceRange ?? null,
+          isSectionHeader: false,
+        };
+      });
 
     return { order, results };
   }
@@ -243,7 +269,10 @@ export class OrdersService {
       const disc = Number(dto.discount ?? order.discount);
       order.netAmount = Math.round(base * (1 - disc / 100) * 100) / 100;
     }
-    if (dto.receiptNumber !== undefined) order.receiptNumber = dto.receiptNumber ?? null;
+    // Auto-generate receipt number when first setting payment info (never manual)
+    if (!order.receiptNumber) {
+      order.receiptNumber = `RCP-${new Date().getFullYear()}${String(Date.now()).slice(-8)}`;
+    }
 
     return this.ordersRepository.save(order);
   }

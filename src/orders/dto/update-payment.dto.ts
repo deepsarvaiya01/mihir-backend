@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaymentStatus, PaymentType } from '../entities/patient-test-order.entity';
 
@@ -30,10 +30,4 @@ export class UpdatePaymentDto {
   @Min(0)
   @IsOptional()
   netAmount?: number;
-
-  @ApiPropertyOptional({ example: 'RCP1234567890' })
-  @IsString()
-  @IsOptional()
-  @MaxLength(30)
-  receiptNumber?: string | null;
 }

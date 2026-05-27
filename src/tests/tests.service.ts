@@ -97,6 +97,8 @@ export class TestsService {
       optionsJson: dto.formulaJson ?? (dto.options ? JSON.stringify(dto.options) : null),
       unit: dto.unit ?? null,
       displayOrder: dto.displayOrder ?? 1,
+      referenceRange: dto.referenceRange ?? null,
+      isSectionHeader: dto.isSectionHeader ?? false,
     });
     return this.fieldsRepository.save(field);
   }
@@ -112,6 +114,8 @@ export class TestsService {
     field.optionsJson = dto.formulaJson ?? (dto.options ? JSON.stringify(dto.options) : null);
     field.unit = dto.unit ?? null;
     field.displayOrder = dto.displayOrder ?? 1;
+    field.referenceRange = dto.referenceRange ?? null;
+    field.isSectionHeader = dto.isSectionHeader ?? false;
     return this.fieldsRepository.save(field);
   }
 
