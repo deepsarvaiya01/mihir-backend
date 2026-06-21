@@ -26,6 +26,12 @@ export class TestTemplate {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   amount: number;
 
+  @Column({ name: 'summary_title', length: 255, nullable: true })
+  summaryTitle: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  summary: string | null;
+
   @OneToMany(() => TestTemplateField, (field) => field.template, {
     cascade: true,
   })

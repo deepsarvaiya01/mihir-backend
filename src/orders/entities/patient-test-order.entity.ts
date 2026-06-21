@@ -83,6 +83,10 @@ export class PatientTestOrder {
   @Column({ name: 'attachment_name', type: 'varchar', length: 255, nullable: true })
   attachmentName: string | null;
 
+  /** Remark written by SUPER_ADMIN when reverting an approved order for correction */
+  @Column({ name: 'revert_remark', type: 'varchar', length: 500, nullable: true })
+  revertRemark: string | null;
+
   @OneToMany(() => PatientTestResult, (result) => result.order, { cascade: true })
   results: PatientTestResult[];
 

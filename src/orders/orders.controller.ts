@@ -91,6 +91,23 @@ export class OrdersController {
     return this.ordersService.createBatchOrders(dto);
   }
 
+  @Post('batch-submit')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.LAB_USER)
+  @ApiOperation({ summary: 'Submit all IN_PROGRESS orders in a receipt for approval at once' })
+  batchSubmit(@Body('receiptNumber') receiptNumber: string) {
+    return this.ordersService.batchSubmitByReceipt(receiptNumber);
+  }
+
+  @Patch('revert/:id')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Revert an approved order back to IN_PROGRESS for result correction' })
+  revertOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('remark') remark: string,
+  ) {
+    return this.ordersService.revertOrder(id, remark);
+  }
+
   @Patch(':id/payment')
   @Roles(UserRole.SUPER_ADMIN, UserRole.LAB_USER)
   @ApiOperation({ summary: 'Update payment details for an order' })

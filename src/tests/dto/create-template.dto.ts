@@ -18,6 +18,12 @@ export class CreateTemplateDto {
   @IsNumber() @Min(0) @IsOptional()
   amount?: number;
 
+  @IsString() @IsOptional() @MaxLength(255)
+  summaryTitle?: string;
+
+  @IsString() @IsOptional()
+  summary?: string;
+
   @IsArray() @IsOptional()
   b2bPrices?: B2bPriceItemDto[];
 }

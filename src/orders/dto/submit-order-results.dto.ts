@@ -46,6 +46,11 @@ export class SubmitOrderResultsDto {
   @IsString()
   @IsOptional()
   attachmentName?: string;
+
+  /** When true: save partial results as draft (IN_PROGRESS), skip required-field validation */
+  @IsBoolean()
+  @IsOptional()
+  isDraft?: boolean;
 }
 
 export { SubmitOrderResultValueDto };

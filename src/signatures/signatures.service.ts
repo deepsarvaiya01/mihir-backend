@@ -25,16 +25,27 @@ export class SignaturesService {
   }
 
   async activate(id: number): Promise<Signature> {
-    // Deactivate all first
-    await this.repo.update({}, { isActive: false });
     const sig = await this.repo.findOne({ where: { id } });
     if (!sig) throw new NotFoundException('Signature not found');
+
+    // Deactivate any currently active signature by finding and saving it individually
+    // (avoids bulk UPDATE without a key-based WHERE which fails in MySQL safe-update mode)
+    const currentlyActive = await this.repo.findOne({ where: { isActive: true } });
+    if (currentlyActive && currentlyActive.id !== id) {
+      currentlyActive.isActive = false;
+      await this.repo.save(currentlyActive);
+    }
+
     sig.isActive = true;
     return this.repo.save(sig);
   }
 
   async deactivateAll(): Promise<{ message: string }> {
-    await this.repo.update({}, { isActive: false });
+    const active = await this.repo.find({ where: { isActive: true } });
+    for (const sig of active) {
+      sig.isActive = false;
+      await this.repo.save(sig);
+    }
     return { message: 'All signatures deactivated' };
   }
 

@@ -79,47 +79,82 @@ export class OrdersService {
     const order = await this.ordersRepository.findOne({ where: { id: orderId } });
     if (!order) throw new NotFoundException('Order not found');
 
-    const fieldIds = submitOrderResultsDto.values.map((v) => v.fieldId);
-    const fields = await this.fieldsRepository.find({
-      where: { id: In(fieldIds), templateId: order.templateId },
-    });
-    const fieldsById = new Map(fields.map((f) => [f.id, f]));
-
-    for (const value of submitOrderResultsDto.values) {
-      const field = fieldsById.get(value.fieldId);
-      if (!field) throw new BadRequestException(`Invalid fieldId ${value.fieldId}`);
-      this.validateValueByFieldType(field, value);
+    // Only PENDING and IN_PROGRESS orders can receive result submissions
+    if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.IN_PROGRESS) {
+      throw new BadRequestException(
+        `Results cannot be modified for an order with status "${order.status}". ` +
+        (order.status === OrderStatus.APPROVED
+          ? 'Ask a SUPER_ADMIN to revert the order first.'
+          : 'The order is locked.'),
+      );
     }
 
-    const existingResults = await this.resultsRepository.find({
-      where: { orderId, fieldId: In(fieldIds) },
-    });
-    const existingByFieldId = new Map(existingResults.map((r) => [r.fieldId, r]));
+    const isDraft = submitOrderResultsDto.isDraft === true;
 
-    const entities = submitOrderResultsDto.values.map((value) => {
-      const field = fieldsById.get(value.fieldId)!;
-      const current = existingByFieldId.get(value.fieldId) ??
-        this.resultsRepository.create({ orderId, fieldId: value.fieldId });
+    const fieldIds = submitOrderResultsDto.values.map((v) => v.fieldId);
 
-      current.valueText = null;
-      current.valueNumber = null;
-      current.valueBoolean = null;
-      current.valueDate = null;
+    // Validate and save submitted field values (skip if nothing submitted — draft with no entries yet)
+    if (fieldIds.length > 0) {
+      const fields = await this.fieldsRepository.find({
+        where: { id: In(fieldIds), templateId: order.templateId },
+      });
+      const fieldsById = new Map(fields.map((f) => [f.id, f]));
 
-      if (field.fieldType === FieldType.TEXT || field.fieldType === FieldType.SELECT) {
-        current.valueText = value.textValue ?? null;
-      } else if (field.fieldType === FieldType.NUMBER || field.fieldType === FieldType.CALCULATED) {
-        current.valueNumber = value.numberValue ?? null;
-      } else if (field.fieldType === FieldType.CHECKBOX) {
-        current.valueBoolean = value.booleanValue ?? null;
-      } else if (field.fieldType === FieldType.DATE) {
-        current.valueDate = value.dateValue ?? null;
+      for (const value of submitOrderResultsDto.values) {
+        const field = fieldsById.get(value.fieldId);
+        if (!field) throw new BadRequestException(`Invalid fieldId ${value.fieldId}`);
+        this.validateValueByFieldType(field, value, isDraft);
       }
-      return current;
-    });
 
-    await this.resultsRepository.save(entities);
-    order.status = OrderStatus.AWAITING_APPROVAL;
+      const existingResults = await this.resultsRepository.find({
+        where: { orderId, fieldId: In(fieldIds) },
+      });
+      const existingByFieldId = new Map(existingResults.map((r) => [r.fieldId, r]));
+
+      const entities = submitOrderResultsDto.values.map((value) => {
+        const field = fieldsById.get(value.fieldId)!;
+        const current = existingByFieldId.get(value.fieldId) ??
+          this.resultsRepository.create({ orderId, fieldId: value.fieldId });
+
+        current.valueText = null;
+        current.valueNumber = null;
+        current.valueBoolean = null;
+        current.valueDate = null;
+
+        if (field.fieldType === FieldType.TEXT || field.fieldType === FieldType.SELECT) {
+          current.valueText = value.textValue ?? null;
+        } else if (field.fieldType === FieldType.NUMBER || field.fieldType === FieldType.CALCULATED) {
+          current.valueNumber = value.numberValue ?? null;
+        } else if (field.fieldType === FieldType.CHECKBOX) {
+          current.valueBoolean = value.booleanValue ?? null;
+        } else if (field.fieldType === FieldType.DATE) {
+          current.valueDate = value.dateValue ?? null;
+        }
+        return current;
+      });
+
+      await this.resultsRepository.save(entities);
+    }
+
+    // For final submission: ensure all required non-header fields have been saved
+    if (!isDraft) {
+      const allFields = await this.fieldsRepository.find({
+        where: { templateId: order.templateId },
+      });
+      // Check against ALL results saved so far (not just this batch)
+      const savedResults = await this.resultsRepository.find({ where: { orderId } });
+      const savedFieldIds = new Set(savedResults.map((r) => r.fieldId));
+      const missingRequired = allFields.filter(
+        (f) => f.required && !f.isSectionHeader && !savedFieldIds.has(f.id),
+      );
+      if (missingRequired.length > 0) {
+        throw new BadRequestException(
+          `Required fields not submitted: ${missingRequired.map((f) => f.fieldName).join(', ')}`,
+        );
+      }
+    }
+
+    order.status = isDraft ? OrderStatus.IN_PROGRESS : OrderStatus.AWAITING_APPROVAL;
     if (submitOrderResultsDto.attachmentBase64) {
       order.attachmentBase64 = submitOrderResultsDto.attachmentBase64;
       order.attachmentName = submitOrderResultsDto.attachmentName ?? null;
@@ -174,6 +209,7 @@ export class OrdersService {
       .map((f) => {
         if (f.isSectionHeader) {
           return {
+            fieldId: f.id,
             fieldName: f.fieldName,
             fieldType: f.fieldType as string,
             value: null as string | number | boolean | null,
@@ -184,6 +220,7 @@ export class OrdersService {
         }
         const r = resultsByFieldId.get(f.id)!;
         return {
+          fieldId: f.id,
           fieldName: f.fieldName,
           fieldType: f.fieldType as string,
           value: (r.valueText ?? r.valueNumber ?? r.valueBoolean ?? r.valueDate ?? null) as string | number | boolean | null,
@@ -277,6 +314,62 @@ export class OrdersService {
     return this.ordersRepository.save(order);
   }
 
+  async revertOrder(orderId: number, remark: string) {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: ['patient', 'template'],
+    });
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.status !== OrderStatus.APPROVED) {
+      throw new BadRequestException('Only approved orders can be reverted');
+    }
+    order.status = OrderStatus.IN_PROGRESS;
+    order.revertRemark = remark?.trim() || 'Reverted for correction';
+    return this.ordersRepository.save(order);
+  }
+
+  async batchSubmitByReceipt(receiptNumber: string) {
+    const orders = await this.ordersRepository.find({
+      where: { receiptNumber },
+      relations: ['template'],
+    });
+
+    if (orders.length === 0) throw new NotFoundException(`No orders found for receipt ${receiptNumber}`);
+
+    // Any order still PENDING or REJECTED means results haven't been entered yet
+    const notReady = orders.filter(
+      (o) => o.status === OrderStatus.PENDING || o.status === OrderStatus.REJECTED,
+    );
+    if (notReady.length > 0) {
+      const names = notReady.map((o) => `${o.template?.name ?? `#${o.id}`} (${o.status})`).join(', ');
+      throw new BadRequestException(`Results not entered for: ${names}`);
+    }
+
+    // Validate required fields are saved for every IN_PROGRESS order
+    const inProgress = orders.filter((o) => o.status === OrderStatus.IN_PROGRESS);
+    const errors: string[] = [];
+    for (const order of inProgress) {
+      const allFields = await this.fieldsRepository.find({ where: { templateId: order.templateId } });
+      const savedResults = await this.resultsRepository.find({ where: { orderId: order.id } });
+      const savedFieldIds = new Set(savedResults.map((r) => r.fieldId));
+      const missing = allFields.filter((f) => f.required && !f.isSectionHeader && !savedFieldIds.has(f.id));
+      if (missing.length > 0) {
+        errors.push(`${order.template?.name ?? `Order #${order.id}`}: ${missing.map((f) => f.fieldName).join(', ')}`);
+      }
+    }
+    if (errors.length > 0) {
+      throw new BadRequestException(`Required fields missing — ${errors.join(' | ')}`);
+    }
+
+    // Submit all IN_PROGRESS orders at once
+    for (const order of inProgress) {
+      order.status = OrderStatus.AWAITING_APPROVAL;
+      await this.ordersRepository.save(order);
+    }
+
+    return { count: inProgress.length, receiptNumber };
+  }
+
   async deleteOrder(orderId: number) {
     const order = await this.ordersRepository.findOne({ where: { id: orderId } });
     if (!order) throw new NotFoundException('Order not found');
@@ -287,9 +380,10 @@ export class OrdersService {
     return { message: 'Order deleted successfully' };
   }
 
-  private validateValueByFieldType(field: TestTemplateField, value: SubmitOrderResultValueDto) {
+  private validateValueByFieldType(field: TestTemplateField, value: SubmitOrderResultValueDto, isDraft = false) {
     if (field.fieldType === FieldType.CALCULATED) return;
-    if (field.required) {
+    // Required-field checks are skipped for drafts
+    if (!isDraft && field.required) {
       if ((field.fieldType === FieldType.TEXT || field.fieldType === FieldType.SELECT) && !value.textValue) {
         throw new BadRequestException(`${field.fieldName} is required`);
       }

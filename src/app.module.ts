@@ -14,6 +14,7 @@ import { B2bLabsModule } from './b2b-labs/b2b-labs.module';
 import { LabBranchesModule } from './lab-branches/lab-branches.module';
 import { SignaturesModule } from './signatures/signatures.module';
 import { LabSettingsModule } from './lab-settings/lab-settings.module';
+import { LogosModule } from './logos/logos.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { LabSettingsModule } from './lab-settings/lab-settings.module';
     LabBranchesModule,
     SignaturesModule,
     LabSettingsModule,
+    LogosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

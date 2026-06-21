@@ -25,6 +25,8 @@ export class TestsService {
       code: dto.code,
       active: dto.active ?? true,
       amount: dto.amount ?? 0,
+      summaryTitle: dto.summaryTitle ?? null,
+      summary: dto.summary ?? null,
     });
     const saved = await this.templatesRepository.save(template);
 
@@ -62,6 +64,8 @@ export class TestsService {
     if (dto.code !== undefined) template.code = dto.code;
     if (dto.active !== undefined) template.active = dto.active;
     if (dto.amount !== undefined) template.amount = dto.amount;
+    if (dto.summaryTitle !== undefined) template.summaryTitle = dto.summaryTitle || null;
+    if (dto.summary !== undefined) template.summary = dto.summary || null;
     await this.templatesRepository.save(template);
 
     if (dto.b2bPrices !== undefined) {
