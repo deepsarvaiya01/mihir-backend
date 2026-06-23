@@ -9,7 +9,7 @@ export class Logo {
   name: string;
 
   /** Base64-encoded image data URI (e.g. "data:image/png;base64,...") */
-  @Column({ type: 'longtext', name: 'image_data' })
+  @Column({ type: 'text', name: 'image_data' })
   imageData: string;
 
   /** Only one logo can be active at a time */

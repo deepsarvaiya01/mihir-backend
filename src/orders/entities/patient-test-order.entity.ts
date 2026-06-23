@@ -77,7 +77,7 @@ export class PatientTestOrder {
   receiptNumber: string | null;
 
   /** Base64 data URI of an attached PDF to be merged with the final report */
-  @Column({ name: 'attachment_base64', type: 'longtext', nullable: true })
+  @Column({ name: 'attachment_base64', type: 'text', nullable: true })
   attachmentBase64: string | null;
 
   @Column({ name: 'attachment_name', type: 'varchar', length: 255, nullable: true })
