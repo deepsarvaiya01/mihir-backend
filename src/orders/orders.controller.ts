@@ -63,6 +63,13 @@ export class OrdersController {
     return this.ordersService.getOrderResults(id);
   }
 
+  @Post('bulk-approve')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Bulk approve multiple orders' })
+  bulkApprove(@Body() body: { orderIds: number[] }) {
+    return this.ordersService.bulkApprove(body.orderIds);
+  }
+
   @Post(':id/approve')
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Approve an order' })

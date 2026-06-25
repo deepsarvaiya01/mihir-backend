@@ -12,6 +12,8 @@ const DEFAULTS: Record<string, string> = {
   lab_logo_base64: '',
   doctor_name: '',
   doctor_qualification: '',
+  lab_gstin: '',
+  lab_hsn_code: '998319',
 };
 
 @Injectable()

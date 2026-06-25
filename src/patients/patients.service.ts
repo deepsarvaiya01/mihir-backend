@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { MailService } from '../mail/mail.service';
 import { PatientTestOrder } from '../orders/entities/patient-test-order.entity';
 import { PatientTestResult } from '../orders/entities/patient-test-result.entity';
@@ -20,6 +21,7 @@ export class PatientsService {
     @InjectRepository(TestTemplateField)
     private readonly fieldsRepository: Repository<TestTemplateField>,
     private readonly mailService: MailService,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   /** Generates PAT-YYYY-NNNNN format, e.g. PAT-2025-00042 */
@@ -57,6 +59,8 @@ export class PatientsService {
     saved.patientCode = this.generatePatientCode(saved.id);
     const patient = await this.patientsRepository.save(saved);
 
+    this.auditLogsService.log({ userName: 'Lab User', action: 'PATIENT_CREATED', entityType: 'Patient', entityId: patient.id, details: { name: patient.fullName, code: patient.patientCode } });
+
     // Step 3: send registration email (fire-and-forget)
     if (patient.email) {
       const dateStr = new Date().toLocaleDateString('en-IN', {
@@ -73,18 +77,24 @@ export class PatientsService {
     return patient;
   }
 
-  async getPatients(search?: string) {
+  async getPatients(search?: string, page = 1, limit = 50) {
+    const skip = (page - 1) * limit;
+    const baseQuery = this.patientsRepository.createQueryBuilder('p');
+
     if (search) {
-      return this.patientsRepository.find({
-        where: [
-          { fullName: ILike(`%${search}%`) },
-          { patientCode: ILike(`%${search}%`) },
-          { phoneNumber: ILike(`%${search}%`) },
-        ],
-        order: { id: 'DESC' },
-      });
+      baseQuery.where(
+        'p.full_name ILIKE :q OR p.patient_code ILIKE :q OR p.phone_number ILIKE :q',
+        { q: `%${search}%` }
+      );
     }
-    return this.patientsRepository.find({ order: { id: 'DESC' } });
+
+    const [data, total] = await baseQuery
+      .orderBy('p.id', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return { data, total, page, limit };
   }
 
   async getPatientById(id: number) {
@@ -105,6 +115,7 @@ export class PatientsService {
   async deletePatient(id: number) {
     const patient = await this.patientsRepository.findOne({ where: { id } });
     if (!patient) throw new NotFoundException('Patient not found');
+    this.auditLogsService.log({ userName: 'Lab User', action: 'PATIENT_DELETED', entityType: 'Patient', entityId: id });
     await this.patientsRepository.remove(patient);
     return { message: 'Patient deleted successfully' };
   }

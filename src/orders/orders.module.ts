@@ -8,6 +8,9 @@ import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { PatientTestOrder } from './entities/patient-test-order.entity';
 import { PatientTestResult } from './entities/patient-test-result.entity';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module';
+import { MailModule } from '../mail/mail.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,6 +22,9 @@ import { PatientTestResult } from './entities/patient-test-result.entity';
       TestTemplateField,
       TestTemplateB2bPrice,
     ]),
+    AuditLogsModule,
+    MailModule,
+    NotificationsModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

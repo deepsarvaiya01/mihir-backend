@@ -43,6 +43,18 @@ export class UsersController {
     return this.usersService.update(id, dto);
   }
 
+  @Patch(':id/deactivate')
+  @ApiOperation({ summary: 'Deactivate a user' })
+  deactivate(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.deactivate(id);
+  }
+
+  @Patch(':id/activate')
+  @ApiOperation({ summary: 'Activate a user' })
+  activate(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.activate(id);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a user' })
   delete(@Param('id', ParseIntPipe) id: number) {

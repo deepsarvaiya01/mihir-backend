@@ -8,9 +8,9 @@ export class Logo {
   @Column({ length: 150 })
   name: string;
 
-  /** Base64-encoded image data URI (e.g. "data:image/png;base64,...") */
-  @Column({ type: 'text', name: 'image_data' })
-  imageData: string;
+  /** Azure Blob Storage URL for this logo image */
+  @Column({ type: 'varchar', length: 500, name: 'image_url' })
+  imageUrl: string;
 
   /** Only one logo can be active at a time */
   @Column({ name: 'is_active', default: false })

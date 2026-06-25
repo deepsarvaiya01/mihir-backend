@@ -19,6 +19,32 @@ export class DashboardService {
     private readonly ordersRepository: Repository<PatientTestOrder>,
   ) {}
 
+  async getTrends(): Promise<{ month: string; orders: number; revenue: number; approved: number }[]> {
+    const since = new Date();
+    since.setMonth(since.getMonth() - 5);
+    since.setDate(1);
+    since.setHours(0, 0, 0, 0);
+
+    const rows = await this.ordersRepository
+      .createQueryBuilder('o')
+      .select("TO_CHAR(DATE_TRUNC('month', o.created_at), 'Mon YY')", 'month')
+      .addSelect("TO_CHAR(DATE_TRUNC('month', o.created_at), 'YYYY-MM')", 'key')
+      .addSelect('COUNT(*)::int', 'orders')
+      .addSelect('COALESCE(SUM(o.net_amount), 0)::float', 'revenue')
+      .addSelect("COUNT(*) FILTER (WHERE o.status = 'APPROVED')::int", 'approved')
+      .where('o.created_at >= :since', { since })
+      .groupBy("DATE_TRUNC('month', o.created_at)")
+      .orderBy("DATE_TRUNC('month', o.created_at)", 'ASC')
+      .getRawMany<{ month: string; key: string; orders: number; revenue: number; approved: number }>();
+
+    return rows.map(r => ({
+      month: r.month,
+      orders: Number(r.orders),
+      revenue: Number(r.revenue),
+      approved: Number(r.approved),
+    }));
+  }
+
   async getSummary() {
     const [superAdmins, labUsers, templates, activeTemplates, patients, orders, approvedOrders] =
       await Promise.all([

@@ -14,6 +14,10 @@ import {
 } from './dto/submit-order-results.dto';
 import { OrderStatus, PatientTestOrder, PaymentStatus, PaymentType } from './entities/patient-test-order.entity';
 import { PatientTestResult } from './entities/patient-test-result.entity';
+import { AzureStorageService } from '../azure-storage/azure-storage.service';
+import { MailService } from '../mail/mail.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OrdersService {
@@ -30,6 +34,10 @@ export class OrdersService {
     private readonly fieldsRepository: Repository<TestTemplateField>,
     @InjectRepository(TestTemplateB2bPrice)
     private readonly b2bPricesRepository: Repository<TestTemplateB2bPrice>,
+    private readonly azureStorage: AzureStorageService,
+    private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async createOrder(createOrderDto: CreateOrderDto) {
@@ -156,10 +164,25 @@ export class OrdersService {
 
     order.status = isDraft ? OrderStatus.IN_PROGRESS : OrderStatus.AWAITING_APPROVAL;
     if (submitOrderResultsDto.attachmentBase64) {
-      order.attachmentBase64 = submitOrderResultsDto.attachmentBase64;
+      const filename = submitOrderResultsDto.attachmentName ?? `order-${orderId}`;
+      order.attachmentUrl = await this.azureStorage.uploadBase64(
+        submitOrderResultsDto.attachmentBase64,
+        'attachments',
+        filename,
+      );
       order.attachmentName = submitOrderResultsDto.attachmentName ?? null;
     }
     await this.ordersRepository.save(order);
+    if (order.status === OrderStatus.AWAITING_APPROVAL) {
+      this.auditLogsService.log({ userName: 'Lab User', action: 'ORDER_SUBMITTED', entityType: 'Order', entityId: orderId, details: { status: 'AWAITING_APPROVAL' } });
+      void this.notificationsService.create({
+        targetRole: 'SUPER_ADMIN',
+        type: 'ORDER_AWAITING_APPROVAL',
+        title: 'New Report Awaiting Approval',
+        message: `Order #${orderId} has been submitted and is ready for review.`,
+        orderId,
+      });
+    }
     return this.getOrderResults(orderId);
   }
 
@@ -168,7 +191,52 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Order not found');
     order.status = OrderStatus.APPROVED;
     await this.ordersRepository.save(order);
+    this.auditLogsService.log({ userName: 'Admin', action: 'ORDER_APPROVED', entityType: 'Order', entityId: orderId, details: { status: 'APPROVED' } });
+    void this.notificationsService.create({
+      targetRole: 'LAB_USER',
+      type: 'ORDER_APPROVED',
+      title: 'Order Approved',
+      message: `Order #${orderId} has been approved successfully.`,
+      orderId,
+    });
+    // Send approval notification if patient has email
+    const fullOrder = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: ['patient', 'template'],
+    });
+    if (fullOrder?.patient?.email) {
+      void this.mailService.sendOrderApproved({
+        to: fullOrder.patient.email,
+        patientName: fullOrder.patient.fullName,
+        orderNum: orderId,
+        testName: fullOrder.template?.name ?? '',
+        approvedAt: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }),
+      });
+    }
+    void this.notificationsService.create({
+      targetRole: 'LAB_USER',
+      type: 'ORDER_APPROVED',
+      title: 'Order Approved',
+      message: `Order #${orderId}${fullOrder?.template?.name ? ` (${fullOrder.template.name})` : ''} has been approved.`,
+      orderId,
+    });
     return this.getOrderResults(orderId);
+  }
+
+  async bulkApprove(orderIds: number[]): Promise<{ approved: number[]; failed: number[] }> {
+    const approved: number[] = [];
+    const failed: number[] = [];
+    await Promise.allSettled(
+      orderIds.map(async (id) => {
+        try {
+          await this.approveOrder(id);
+          approved.push(id);
+        } catch {
+          failed.push(id);
+        }
+      }),
+    );
+    return { approved, failed };
   }
 
   async rejectOrder(orderId: number) {
@@ -179,6 +247,23 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Order not found');
     order.status = OrderStatus.REJECTED;
     await this.ordersRepository.save(order);
+    this.auditLogsService.log({ userName: 'Admin', action: 'ORDER_REJECTED', entityType: 'Order', entityId: orderId, details: { status: 'REJECTED' } });
+    void this.notificationsService.create({
+      targetRole: 'LAB_USER',
+      type: 'ORDER_REJECTED',
+      title: 'Order Rejected',
+      message: `Order #${orderId} could not be approved.`,
+      orderId,
+    });
+    // After saving the rejection
+    if (order?.patient?.email) {
+      void this.mailService.sendOrderRejected({
+        to: order.patient.email,
+        patientName: order.patient.fullName,
+        orderNum: orderId,
+        testName: order.template?.name ?? '',
+      });
+    }
     return { order };
   }
 

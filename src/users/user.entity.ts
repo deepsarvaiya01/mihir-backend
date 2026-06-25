@@ -33,4 +33,7 @@ export class User {
     default: UserRole.LAB_USER,
   })
   role: UserRole;
+
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
 }

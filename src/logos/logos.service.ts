@@ -3,12 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Logo } from './entities/logo.entity';
 import { CreateLogoDto } from './dto/create-logo.dto';
+import { AzureStorageService } from '../azure-storage/azure-storage.service';
 
 @Injectable()
 export class LogosService {
   constructor(
     @InjectRepository(Logo)
     private readonly repo: Repository<Logo>,
+    private readonly azureStorage: AzureStorageService,
   ) {}
 
   getAll(): Promise<Logo[]> {
@@ -20,7 +22,8 @@ export class LogosService {
   }
 
   async create(dto: CreateLogoDto): Promise<Logo> {
-    const logo = this.repo.create({ ...dto, isActive: false });
+    const imageUrl = await this.azureStorage.uploadBase64(dto.imageData, 'logos', dto.name);
+    const logo = this.repo.create({ name: dto.name, imageUrl, isActive: false });
     return this.repo.save(logo);
   }
 
@@ -28,8 +31,6 @@ export class LogosService {
     const logo = await this.repo.findOne({ where: { id } });
     if (!logo) throw new NotFoundException('Logo not found');
 
-    // Deactivate any currently active logo individually (avoids bulk UPDATE
-    // without a key-based WHERE, which fails under MySQL safe-update mode)
     const currentlyActive = await this.repo.findOne({ where: { isActive: true } });
     if (currentlyActive && currentlyActive.id !== id) {
       currentlyActive.isActive = false;
@@ -52,6 +53,7 @@ export class LogosService {
   async delete(id: number): Promise<{ message: string }> {
     const logo = await this.repo.findOne({ where: { id } });
     if (!logo) throw new NotFoundException('Logo not found');
+    await this.azureStorage.deleteByUrl(logo.imageUrl);
     await this.repo.remove(logo);
     return { message: 'Logo deleted' };
   }

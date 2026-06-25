@@ -70,4 +70,20 @@ export class UsersService {
     await this.usersRepository.remove(user);
     return { message: 'User deleted successfully' };
   }
+
+  async deactivate(id: number) {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    user.isActive = false;
+    const saved = await this.usersRepository.save(user);
+    return this.sanitize(saved);
+  }
+
+  async activate(id: number) {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    user.isActive = true;
+    const saved = await this.usersRepository.save(user);
+    return this.sanitize(saved);
+  }
 }

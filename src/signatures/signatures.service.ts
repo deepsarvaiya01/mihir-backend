@@ -3,12 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Signature } from './entities/signature.entity';
 import { CreateSignatureDto } from './dto/create-signature.dto';
+import { AzureStorageService } from '../azure-storage/azure-storage.service';
 
 @Injectable()
 export class SignaturesService {
   constructor(
     @InjectRepository(Signature)
     private readonly repo: Repository<Signature>,
+    private readonly azureStorage: AzureStorageService,
   ) {}
 
   getAll(): Promise<Signature[]> {
@@ -20,7 +22,8 @@ export class SignaturesService {
   }
 
   async create(dto: CreateSignatureDto): Promise<Signature> {
-    const sig = this.repo.create({ ...dto, isActive: false });
+    const imageUrl = await this.azureStorage.uploadBase64(dto.imageData, 'signatures', dto.name);
+    const sig = this.repo.create({ name: dto.name, imageUrl, isActive: false });
     return this.repo.save(sig);
   }
 
@@ -28,8 +31,6 @@ export class SignaturesService {
     const sig = await this.repo.findOne({ where: { id } });
     if (!sig) throw new NotFoundException('Signature not found');
 
-    // Deactivate any currently active signature by finding and saving it individually
-    // (avoids bulk UPDATE without a key-based WHERE which fails in MySQL safe-update mode)
     const currentlyActive = await this.repo.findOne({ where: { isActive: true } });
     if (currentlyActive && currentlyActive.id !== id) {
       currentlyActive.isActive = false;
@@ -52,6 +53,7 @@ export class SignaturesService {
   async delete(id: number): Promise<{ message: string }> {
     const sig = await this.repo.findOne({ where: { id } });
     if (!sig) throw new NotFoundException('Signature not found');
+    await this.azureStorage.deleteByUrl(sig.imageUrl);
     await this.repo.remove(sig);
     return { message: 'Signature deleted' };
   }

@@ -27,8 +27,14 @@ export class PatientsController {
   @Get()
   @ApiOperation({ summary: 'Get all patients with optional search' })
   @ApiQuery({ name: 'search', required: false })
-  getPatients(@Query('search') search?: string) {
-    return this.patientsService.getPatients(search);
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  getPatients(
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.patientsService.getPatients(search, page ? Number(page) : 1, limit ? Number(limit) : 50);
   }
 
   @Get(':id')

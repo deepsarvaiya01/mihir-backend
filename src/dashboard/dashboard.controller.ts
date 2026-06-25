@@ -15,4 +15,9 @@ export class DashboardController {
   getSummary() {
     return this.dashboardService.getSummary();
   }
+
+  @Get('trends')
+  getTrends() {
+    return this.dashboardService.getTrends();
+  }
 }

@@ -15,6 +15,10 @@ import { LabBranchesModule } from './lab-branches/lab-branches.module';
 import { SignaturesModule } from './signatures/signatures.module';
 import { LabSettingsModule } from './lab-settings/lab-settings.module';
 import { LogosModule } from './logos/logos.module';
+import { AzureStorageModule } from './azure-storage/azure-storage.module';
+import { ReportSharesModule } from './report-shares/report-shares.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -46,6 +50,7 @@ import { LogosModule } from './logos/logos.module';
         };
       },
     }),
+    AzureStorageModule,
     AuthModule,
     UsersModule,
     DashboardModule,
@@ -57,6 +62,9 @@ import { LogosModule } from './logos/logos.module';
     SignaturesModule,
     LabSettingsModule,
     LogosModule,
+    AuditLogsModule,
+    NotificationsModule,
+    ReportSharesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
