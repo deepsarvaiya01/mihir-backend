@@ -125,6 +125,27 @@ export class OrdersController {
     return this.ordersService.updatePayment(id, dto);
   }
 
+  @Get('archived')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.LAB_USER)
+  @ApiOperation({ summary: 'Get all archived orders' })
+  getArchivedOrders() {
+    return this.ordersService.getArchivedOrders();
+  }
+
+  @Patch(':id/restore')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.LAB_USER)
+  @ApiOperation({ summary: 'Restore an archived order' })
+  restoreOrder(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.restoreOrder(id);
+  }
+
+  @Delete(':id/permanent')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Permanently delete an archived order' })
+  permanentlyDeleteOrder(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.permanentlyDeleteOrder(id);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a pending or rejected order' })
   deleteOrder(@Param('id', ParseIntPipe) id: number) {

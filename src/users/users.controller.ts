@@ -55,6 +55,24 @@ export class UsersController {
     return this.usersService.activate(id);
   }
 
+  @Get('archived')
+  @ApiOperation({ summary: 'Get archived users' })
+  getArchived() {
+    return this.usersService.getArchived();
+  }
+
+  @Patch(':id/restore')
+  @ApiOperation({ summary: 'Restore archived user' })
+  restoreUser(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.restore(id);
+  }
+
+  @Delete(':id/permanent')
+  @ApiOperation({ summary: 'Permanently delete user' })
+  permanentlyDelete(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.permanentlyDelete(id);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a user' })
   delete(@Param('id', ParseIntPipe) id: number) {

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { MailService } from '../mail/mail.service';
 import { PatientTestOrder } from '../orders/entities/patient-test-order.entity';
@@ -116,8 +116,30 @@ export class PatientsService {
     const patient = await this.patientsRepository.findOne({ where: { id } });
     if (!patient) throw new NotFoundException('Patient not found');
     this.auditLogsService.log({ userName: 'Lab User', action: 'PATIENT_DELETED', entityType: 'Patient', entityId: id });
+    await this.patientsRepository.softDelete(id);
+    return { message: 'Patient archived successfully' };
+  }
+
+  async getArchivedPatients() {
+    return this.patientsRepository.find({
+      withDeleted: true,
+      where: { deletedAt: Not(IsNull()) },
+      order: { deletedAt: 'DESC' },
+    });
+  }
+
+  async restorePatient(id: number) {
+    const patient = await this.patientsRepository.findOne({ where: { id }, withDeleted: true });
+    if (!patient) throw new NotFoundException('Patient not found');
+    await this.patientsRepository.restore(id);
+    return { message: 'Patient restored successfully' };
+  }
+
+  async permanentlyDeletePatient(id: number) {
+    const patient = await this.patientsRepository.findOne({ where: { id }, withDeleted: true });
+    if (!patient) throw new NotFoundException('Patient not found');
     await this.patientsRepository.remove(patient);
-    return { message: 'Patient deleted successfully' };
+    return { message: 'Patient permanently deleted' };
   }
 
   async getPatientResultHistory(patientId: number) {

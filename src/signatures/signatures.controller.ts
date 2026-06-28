@@ -38,16 +38,16 @@ export class SignaturesController {
     return this.service.getActive();
   }
 
+  @Get('archived')
+  @ApiOperation({ summary: 'Get archived signatures' })
+  getArchived() {
+    return this.service.getArchived();
+  }
+
   @Post()
   @ApiOperation({ summary: 'Upload a new signature image' })
   create(@Body() dto: CreateSignatureDto) {
     return this.service.create(dto);
-  }
-
-  @Patch(':id/activate')
-  @ApiOperation({ summary: 'Set a signature as the active/default one for reports' })
-  activate(@Param('id', ParseIntPipe) id: number) {
-    return this.service.activate(id);
   }
 
   @Patch('deactivate-all')
@@ -56,8 +56,26 @@ export class SignaturesController {
     return this.service.deactivateAll();
   }
 
+  @Patch(':id/activate')
+  @ApiOperation({ summary: 'Set a signature as the active/default one for reports' })
+  activate(@Param('id', ParseIntPipe) id: number) {
+    return this.service.activate(id);
+  }
+
+  @Patch(':id/restore')
+  @ApiOperation({ summary: 'Restore a soft-deleted signature' })
+  restore(@Param('id', ParseIntPipe) id: number) {
+    return this.service.restore(id);
+  }
+
+  @Delete(':id/permanent')
+  @ApiOperation({ summary: 'Permanently delete a signature' })
+  permanentlyDelete(@Param('id', ParseIntPipe) id: number) {
+    return this.service.permanentlyDelete(id);
+  }
+
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a signature' })
+  @ApiOperation({ summary: 'Soft delete a signature' })
   delete(@Param('id', ParseIntPipe) id: number) {
     return this.service.delete(id);
   }

@@ -31,11 +31,18 @@ export class LogosController {
     return this.logosService.getAll();
   }
 
-  // Must be declared before /:id to avoid "active" being parsed as an id
+  // Must be declared before /:id to avoid static routes being parsed as an id
   @Get('active')
   @ApiOperation({ summary: 'Get the currently active logo' })
   getActive() {
     return this.logosService.getActive();
+  }
+
+  @Get('archived')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get archived logos' })
+  getArchived() {
+    return this.logosService.getArchived();
   }
 
   @Patch('deactivate-all')
@@ -59,9 +66,23 @@ export class LogosController {
     return this.logosService.activate(id);
   }
 
+  @Patch(':id/restore')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Restore a soft-deleted logo' })
+  restore(@Param('id', ParseIntPipe) id: number) {
+    return this.logosService.restore(id);
+  }
+
+  @Delete(':id/permanent')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Permanently delete a logo' })
+  permanentlyDelete(@Param('id', ParseIntPipe) id: number) {
+    return this.logosService.permanentlyDelete(id);
+  }
+
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Delete a logo' })
+  @ApiOperation({ summary: 'Soft delete a logo' })
   delete(@Param('id', ParseIntPipe) id: number) {
     return this.logosService.delete(id);
   }

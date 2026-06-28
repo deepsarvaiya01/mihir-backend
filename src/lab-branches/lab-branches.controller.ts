@@ -19,6 +19,11 @@ export class LabBranchesController {
   @ApiOperation({ summary: 'Get all lab branches' })
   getAll() { return this.service.getAll(); }
 
+  @Get('archived')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get archived lab branches' })
+  getArchived() { return this.service.getArchived(); }
+
   @Post()
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create lab branch' })
@@ -29,8 +34,18 @@ export class LabBranchesController {
   @ApiOperation({ summary: 'Update lab branch' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CreateLabBranchDto>) { return this.service.update(id, dto); }
 
+  @Patch(':id/restore')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Restore a soft-deleted lab branch' })
+  restore(@Param('id', ParseIntPipe) id: number) { return this.service.restore(id); }
+
+  @Delete(':id/permanent')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Permanently delete a lab branch' })
+  permanentlyDelete(@Param('id', ParseIntPipe) id: number) { return this.service.permanentlyDelete(id); }
+
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Delete lab branch' })
+  @ApiOperation({ summary: 'Soft delete lab branch' })
   delete(@Param('id', ParseIntPipe) id: number) { return this.service.delete(id); }
 }

@@ -50,6 +50,27 @@ export class TestsController {
     return this.testsService.updateTemplate(id, updateTemplateDto);
   }
 
+  @Get('archived')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get archived templates' })
+  getArchivedTemplates() {
+    return this.testsService.getArchivedTemplates();
+  }
+
+  @Patch(':id/restore')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Restore archived template' })
+  restoreTemplate(@Param('id', ParseIntPipe) id: number) {
+    return this.testsService.restoreTemplate(id);
+  }
+
+  @Delete(':id/permanent')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Permanently delete archived template' })
+  permanentlyDeleteTemplate(@Param('id', ParseIntPipe) id: number) {
+    return this.testsService.permanentlyDeleteTemplate(id);
+  }
+
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Delete a test template' })

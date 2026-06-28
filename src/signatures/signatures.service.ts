@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { Signature } from './entities/signature.entity';
 import { CreateSignatureDto } from './dto/create-signature.dto';
 import { AzureStorageService } from '../azure-storage/azure-storage.service';
@@ -53,8 +53,26 @@ export class SignaturesService {
   async delete(id: number): Promise<{ message: string }> {
     const sig = await this.repo.findOne({ where: { id } });
     if (!sig) throw new NotFoundException('Signature not found');
+    await this.repo.softDelete(id);
+    return { message: 'Signature deleted' };
+  }
+
+  getArchived(): Promise<Signature[]> {
+    return this.repo.find({ withDeleted: true, where: { deletedAt: Not(IsNull()) }, order: { createdAt: 'DESC' } });
+  }
+
+  async restore(id: number): Promise<{ message: string }> {
+    const sig = await this.repo.findOne({ withDeleted: true, where: { id } });
+    if (!sig) throw new NotFoundException('Signature not found');
+    await this.repo.restore(id);
+    return { message: 'Signature restored' };
+  }
+
+  async permanentlyDelete(id: number): Promise<{ message: string }> {
+    const sig = await this.repo.findOne({ withDeleted: true, where: { id } });
+    if (!sig) throw new NotFoundException('Signature not found');
     await this.azureStorage.deleteByUrl(sig.imageUrl);
     await this.repo.remove(sig);
-    return { message: 'Signature deleted' };
+    return { message: 'Signature permanently deleted' };
   }
 }

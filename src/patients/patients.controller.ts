@@ -52,6 +52,25 @@ export class PatientsController {
     return this.patientsService.updatePatient(id, dto);
   }
 
+  @Get('archived')
+  @ApiOperation({ summary: 'Get all archived patients' })
+  getArchivedPatients() {
+    return this.patientsService.getArchivedPatients();
+  }
+
+  @Patch(':id/restore')
+  @ApiOperation({ summary: 'Restore an archived patient' })
+  restorePatient(@Param('id', ParseIntPipe) id: number) {
+    return this.patientsService.restorePatient(id);
+  }
+
+  @Delete(':id/permanent')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Permanently delete an archived patient' })
+  permanentlyDeletePatient(@Param('id', ParseIntPipe) id: number) {
+    return this.patientsService.permanentlyDeletePatient(id);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a patient' })
   deletePatient(@Param('id', ParseIntPipe) id: number) {

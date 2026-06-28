@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
 import { Patient } from '../patients/entities/patient.entity';
 import { FieldType, TestTemplateField } from '../tests/entities/test-template-field.entity';
 import { TestTemplate } from '../tests/entities/test-template.entity';
@@ -461,8 +461,31 @@ export class OrdersService {
     if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.REJECTED) {
       throw new BadRequestException('Only pending or rejected orders can be deleted');
     }
+    await this.ordersRepository.softDelete(orderId);
+    return { message: 'Order archived successfully' };
+  }
+
+  async getArchivedOrders() {
+    return this.ordersRepository.find({
+      withDeleted: true,
+      where: { deletedAt: Not(IsNull()) },
+      relations: ['patient', 'template'],
+      order: { deletedAt: 'DESC' },
+    });
+  }
+
+  async restoreOrder(id: number) {
+    const order = await this.ordersRepository.findOne({ where: { id }, withDeleted: true });
+    if (!order) throw new NotFoundException('Order not found');
+    await this.ordersRepository.restore(id);
+    return { message: 'Order restored successfully' };
+  }
+
+  async permanentlyDeleteOrder(id: number) {
+    const order = await this.ordersRepository.findOne({ where: { id }, withDeleted: true, relations: ['results'] });
+    if (!order) throw new NotFoundException('Order not found');
     await this.ordersRepository.remove(order);
-    return { message: 'Order deleted successfully' };
+    return { message: 'Order permanently deleted' };
   }
 
   private validateValueByFieldType(field: TestTemplateField, value: SubmitOrderResultValueDto, isDraft = false) {

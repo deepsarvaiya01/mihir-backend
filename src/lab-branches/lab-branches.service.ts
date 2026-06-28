@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { LabBranch } from './entities/lab-branch.entity';
 import { CreateLabBranchDto } from './dto/create-lab-branch.dto';
 
@@ -25,7 +25,25 @@ export class LabBranchesService {
   async delete(id: number) {
     const branch = await this.repo.findOne({ where: { id } });
     if (!branch) throw new NotFoundException('Lab branch not found');
-    await this.repo.remove(branch);
+    await this.repo.softDelete(id);
     return { message: 'Lab branch deleted' };
+  }
+
+  getArchived() {
+    return this.repo.find({ withDeleted: true, where: { deletedAt: Not(IsNull()) }, order: { name: 'ASC' } });
+  }
+
+  async restore(id: number) {
+    const branch = await this.repo.findOne({ withDeleted: true, where: { id } });
+    if (!branch) throw new NotFoundException('Lab branch not found');
+    await this.repo.restore(id);
+    return { message: 'Lab branch restored' };
+  }
+
+  async permanentlyDelete(id: number) {
+    const branch = await this.repo.findOne({ withDeleted: true, where: { id } });
+    if (!branch) throw new NotFoundException('Lab branch not found');
+    await this.repo.remove(branch);
+    return { message: 'Lab branch permanently deleted' };
   }
 }

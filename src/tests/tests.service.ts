@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
 import { UpsertTemplateFieldDto } from './dto/upsert-template-field.dto';
@@ -84,8 +84,30 @@ export class TestsService {
   async deleteTemplate(templateId: number) {
     const template = await this.templatesRepository.findOne({ where: { id: templateId } });
     if (!template) throw new NotFoundException('Template not found');
-    await this.templatesRepository.remove(template);
+    await this.templatesRepository.softDelete(templateId);
     return { message: 'Template deleted successfully' };
+  }
+
+  async getArchivedTemplates() {
+    return this.templatesRepository.find({
+      withDeleted: true,
+      where: { deletedAt: Not(IsNull()) },
+      order: { deletedAt: 'DESC' },
+    });
+  }
+
+  async restoreTemplate(id: number) {
+    const template = await this.templatesRepository.findOne({ where: { id }, withDeleted: true });
+    if (!template) throw new NotFoundException('Template not found');
+    await this.templatesRepository.restore(id);
+    return { message: 'Template restored successfully' };
+  }
+
+  async permanentlyDeleteTemplate(id: number) {
+    const template = await this.templatesRepository.findOne({ where: { id }, withDeleted: true, relations: ['fields', 'b2bPrices'] });
+    if (!template) throw new NotFoundException('Template not found');
+    await this.templatesRepository.remove(template);
+    return { message: 'Template permanently deleted' };
   }
 
   async createTemplateField(templateId: number, dto: UpsertTemplateFieldDto) {

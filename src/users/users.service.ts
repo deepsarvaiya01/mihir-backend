@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -67,8 +67,31 @@ export class UsersService {
   async delete(id: number) {
     const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
+    await this.usersRepository.softDelete(id);
+    return { message: 'User archived successfully' };
+  }
+
+  async getArchived() {
+    const users = await this.usersRepository.find({
+      withDeleted: true,
+      where: { deletedAt: Not(IsNull()) },
+      order: { deletedAt: 'DESC' },
+    });
+    return users.map(u => this.sanitize(u));
+  }
+
+  async restore(id: number) {
+    const user = await this.usersRepository.findOne({ where: { id }, withDeleted: true });
+    if (!user) throw new NotFoundException('User not found');
+    await this.usersRepository.restore(id);
+    return { message: 'User restored successfully' };
+  }
+
+  async permanentlyDelete(id: number) {
+    const user = await this.usersRepository.findOne({ where: { id }, withDeleted: true });
+    if (!user) throw new NotFoundException('User not found');
     await this.usersRepository.remove(user);
-    return { message: 'User deleted successfully' };
+    return { message: 'User permanently deleted' };
   }
 
   async deactivate(id: number) {

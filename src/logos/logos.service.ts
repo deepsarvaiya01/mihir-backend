@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { Logo } from './entities/logo.entity';
 import { CreateLogoDto } from './dto/create-logo.dto';
 import { AzureStorageService } from '../azure-storage/azure-storage.service';
@@ -53,8 +53,26 @@ export class LogosService {
   async delete(id: number): Promise<{ message: string }> {
     const logo = await this.repo.findOne({ where: { id } });
     if (!logo) throw new NotFoundException('Logo not found');
+    await this.repo.softDelete(id);
+    return { message: 'Logo deleted' };
+  }
+
+  getArchived(): Promise<Logo[]> {
+    return this.repo.find({ withDeleted: true, where: { deletedAt: Not(IsNull()) }, order: { createdAt: 'DESC' } });
+  }
+
+  async restore(id: number): Promise<{ message: string }> {
+    const logo = await this.repo.findOne({ withDeleted: true, where: { id } });
+    if (!logo) throw new NotFoundException('Logo not found');
+    await this.repo.restore(id);
+    return { message: 'Logo restored' };
+  }
+
+  async permanentlyDelete(id: number): Promise<{ message: string }> {
+    const logo = await this.repo.findOne({ withDeleted: true, where: { id } });
+    if (!logo) throw new NotFoundException('Logo not found');
     await this.azureStorage.deleteByUrl(logo.imageUrl);
     await this.repo.remove(logo);
-    return { message: 'Logo deleted' };
+    return { message: 'Logo permanently deleted' };
   }
 }

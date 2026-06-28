@@ -19,6 +19,11 @@ export class B2bLabsController {
   @ApiOperation({ summary: 'Get all B2B labs' })
   getAll() { return this.service.getAll(); }
 
+  @Get('archived')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get archived B2B labs' })
+  getArchived() { return this.service.getArchived(); }
+
   @Post()
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create B2B lab' })
@@ -29,8 +34,18 @@ export class B2bLabsController {
   @ApiOperation({ summary: 'Update B2B lab' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CreateB2bLabDto>) { return this.service.update(id, dto); }
 
+  @Patch(':id/restore')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Restore a soft-deleted B2B lab' })
+  restore(@Param('id', ParseIntPipe) id: number) { return this.service.restore(id); }
+
+  @Delete(':id/permanent')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Permanently delete a B2B lab' })
+  permanentlyDelete(@Param('id', ParseIntPipe) id: number) { return this.service.permanentlyDelete(id); }
+
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Delete B2B lab' })
+  @ApiOperation({ summary: 'Soft delete B2B lab' })
   delete(@Param('id', ParseIntPipe) id: number) { return this.service.delete(id); }
 }
