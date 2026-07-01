@@ -121,10 +121,12 @@ export class MailService {
     approvedAt: string;
     reportUrl?: string;
     labName?: string;
+    pdfBase64?: string;
+    plainPdfBase64?: string;
   }): Promise<void> {
     if (!this.transporter) return;
 
-    const { to, patientName, orderNum, testName, approvedAt, reportUrl, labName = 'LabOps Laboratory' } = opts;
+    const { to, patientName, orderNum, testName, approvedAt, reportUrl, labName = 'LabOps Laboratory', pdfBase64, plainPdfBase64 } = opts;
     const from = this.config.get<string>('MAIL_FROM') ?? `"${labName}" <noreply@labops.local>`;
 
     const reportButton = reportUrl
@@ -204,6 +206,10 @@ export class MailService {
         to,
         subject: `Order #${orderNum} Approved — ${testName}`,
         html,
+        attachments: [
+          ...(pdfBase64 ? [{ filename: `report-${orderNum}-letterhead.pdf`, content: Buffer.from(pdfBase64, 'base64'), contentType: 'application/pdf' }] : []),
+          ...(plainPdfBase64 ? [{ filename: `report-${orderNum}-plain.pdf`, content: Buffer.from(plainPdfBase64, 'base64'), contentType: 'application/pdf' }] : []),
+        ],
       });
       this.logger.log(`Order approved email sent to ${to} (order #${orderNum})`);
     } catch (err) {

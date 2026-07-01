@@ -186,7 +186,7 @@ export class OrdersService {
     return this.getOrderResults(orderId);
   }
 
-  async approveOrder(orderId: number) {
+  async approveOrder(orderId: number, approverEmail?: string, pdfBase64?: string, plainPdfBase64?: string) {
     const order = await this.ordersRepository.findOne({ where: { id: orderId } });
     if (!order) throw new NotFoundException('Order not found');
     order.status = OrderStatus.APPROVED;
@@ -199,18 +199,31 @@ export class OrdersService {
       message: `Order #${orderId} has been approved successfully.`,
       orderId,
     });
-    // Send approval notification if patient has email
     const fullOrder = await this.ordersRepository.findOne({
       where: { id: orderId },
       relations: ['patient', 'template'],
     });
+    const approvedAt = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
     if (fullOrder?.patient?.email) {
       void this.mailService.sendOrderApproved({
         to: fullOrder.patient.email,
         patientName: fullOrder.patient.fullName,
         orderNum: orderId,
         testName: fullOrder.template?.name ?? '',
-        approvedAt: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }),
+        approvedAt,
+        pdfBase64,
+        plainPdfBase64,
+      });
+    }
+    if (approverEmail) {
+      void this.mailService.sendOrderApproved({
+        to: approverEmail,
+        patientName: fullOrder?.patient?.fullName ?? `Order #${orderId}`,
+        orderNum: orderId,
+        testName: fullOrder?.template?.name ?? '',
+        approvedAt,
+        pdfBase64,
+        plainPdfBase64,
       });
     }
     void this.notificationsService.create({

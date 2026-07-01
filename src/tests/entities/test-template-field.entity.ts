@@ -48,9 +48,15 @@ export class TestTemplateField {
   @Column({ name: 'display_order', type: 'int', default: 1 })
   displayOrder: number;
 
-  /** Normal reference range string, e.g. "13.0-18.0" or "4000-10000" */
+  /** Legacy single reference range — kept for backward compatibility */
   @Column({ name: 'reference_range', type: 'varchar', length: 100, nullable: true })
   referenceRange: string | null;
+
+  @Column({ name: 'reference_range_male', type: 'varchar', length: 100, nullable: true })
+  referenceRangeMale: string | null;
+
+  @Column({ name: 'reference_range_female', type: 'varchar', length: 100, nullable: true })
+  referenceRangeFemale: string | null;
 
   /** When true this field acts as a section heading in the report (no value/unit/range) */
   @Column({ name: 'is_section_header', default: false })

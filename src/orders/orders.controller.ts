@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/user.entity';
@@ -19,6 +20,8 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { SubmitOrderResultsDto } from './dto/submit-order-results.dto';
 import { OrdersService } from './orders.service';
+
+interface JwtUser { userId: number; email: string; name: string; role: string }
 
 @ApiTags('Orders')
 @ApiBearerAuth()
@@ -73,8 +76,13 @@ export class OrdersController {
   @Post(':id/approve')
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Approve an order' })
-  approveOrder(@Param('id', ParseIntPipe) id: number) {
-    return this.ordersService.approveOrder(id);
+  approveOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtUser,
+    @Body('pdfBase64') pdfBase64?: string,
+    @Body('plainPdfBase64') plainPdfBase64?: string,
+  ) {
+    return this.ordersService.approveOrder(id, user?.email, pdfBase64, plainPdfBase64);
   }
 
   @Post(':id/reject')

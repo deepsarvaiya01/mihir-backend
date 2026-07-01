@@ -48,6 +48,16 @@ export class UpsertTemplateFieldDto {
   @MaxLength(100)
   referenceRange?: string;
 
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  referenceRangeMale?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  referenceRangeFemale?: string;
+
   @IsBoolean()
   @IsOptional()
   isSectionHeader?: boolean;
